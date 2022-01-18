@@ -2,10 +2,7 @@ from __future__ import division
 from __future__ import print_function
 
 import time
-
 import tensorflow as tf
-import matplotlib.pyplot as plt
-# from camera import Camera
 
 from gcn.utils import *
 from gcn.models import GCN, MLP
@@ -21,7 +18,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dataset', 'cora', 'Dataset string.')  # 'cora', 'citeseer', 'pubmed'
 flags.DEFINE_string('model', 'gcn', 'Model string.')  # 'gcn', 'gcn_cheby', 'dense'
 flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('epochs', 256, 'Number of epochs to train.')
+flags.DEFINE_integer('epochs', 200, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 16, 'Number of units in hidden layer 1.')
 flags.DEFINE_float('dropout', 0.5, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('weight_decay', 5e-4, 'Weight for L2 loss on embedding matrix.')
@@ -76,12 +73,7 @@ def evaluate(features, support, labels, mask, placeholders):
 # Init variables
 sess.run(tf.global_variables_initializer())
 
-val_loss_set = []
-train_loss_set = []
-
-fig = plt.figure()
-
-# camera = Camera(fig)
+cost_val = []
 
 # Train model
 for epoch in range(FLAGS.epochs):
@@ -96,13 +88,7 @@ for epoch in range(FLAGS.epochs):
 
     # Validation
     cost, acc, duration = evaluate(features, support, y_val, val_mask, placeholders)
-    val_loss_set.append(cost)
-    train_loss_set.append(outs[1])
-
-    # for i in range(cost.shape[0]):
-    #    text_plot = plt.text(cost[i, 0], cost[i, 1], str(i + 1))
-
-    # camera.snap()
+    cost_val.append(cost)
 
     # Print results
     print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(outs[1]),
@@ -110,33 +96,11 @@ for epoch in range(FLAGS.epochs):
           "val_acc=", "{:.5f}".format(acc), "time=", "{:.5f}".format(time.time() - t))
 
     # Early stopping is implemented. If the validation accuracy is not improving, then it stops training.
-    if epoch > FLAGS.early_stopping and val_loss_set[-1] > np.mean(val_loss_set[-(FLAGS.early_stopping + 1):-1]):
+    if epoch > FLAGS.early_stopping and cost_val[-1] > np.mean(cost_val[-(FLAGS.early_stopping+1):-1]):
         print("Early stopping...")
         break
 
-
 print("Optimization Finished!")
-
-# plot the results
-plt.xlabel('epoch')
-plt.ylabel('loss')
-plt.title('GCN on cora dataset')
-if len(train_loss_set) < FLAGS.epochs:
-    # in case of early stopping
-    epochs_array = np.arange(0, len(train_loss_set))
-else:
-    # no early stopping
-    epochs_array = np.arange(0, FLAGS.epochs)
-plt.plot(epochs_array, train_loss_set, label="Training loss")
-plt.plot(epochs_array, val_loss_set, label="Validation loss")
-plt.legend()
-plt.show()
-
-
-# Plot animation using celluloid
-
-# animation = camera.animate(blit=False, interval=150)
-# animation.save('./train_karate_animation.mp4', writer='ffmpeg', fps=60)
 
 # Testing
 test_cost, test_acc, test_duration = evaluate(features, support, y_test, test_mask, placeholders)
